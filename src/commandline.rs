@@ -6,6 +6,8 @@
 
 use std::path::PathBuf;
 
+use regex::Regex;
+
 use structopt::clap::{crate_authors, crate_description, crate_name};
 use structopt::StructOpt;
 
@@ -23,4 +25,12 @@ pub struct Arguments {
     /// Only last version changes
     #[structopt(short, long)]
     pub only_last: bool,
+
+    /// Commit message regular expression
+    #[structopt(short, long, default_value = r"(.+)\s+\(issue\s+#(\d+)\)")]
+    pub commit_regex: Regex,
+
+    /// Commit message replacement text
+    #[structopt(short = "r", long, default_value = "${1} (issue ${2})")]
+    pub commit_replacement: String,
 }

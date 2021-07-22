@@ -19,6 +19,8 @@ use chrono::{NaiveDate, TimeZone, Utc};
 
 use markdown_composer::{List, Markdown};
 
+use regex::Regex;
+
 mod commandline;
 use commandline::Arguments;
 
@@ -31,6 +33,9 @@ fn main() -> Result<()> {
     let arguments = Arguments::from_args();
     setup_logging(arguments.verbosity);
 
+    let commit_regex = arguments.commit_regex.clone();
+    let commit_replacement = arguments.commit_replacement.clone();
+
     let repo = Repository::open(arguments.repo_path)?;
     let versions = find_all_versions(&repo)?;
     info!("Found {} versions", versions.len());
@@ -38,7 +43,9 @@ fn main() -> Result<()> {
     let versions = find_version_dates(&repo, versions)?;
     let version_pairs = pair_versions(versions);
     let version_pairs = keep_only_last_version(version_pairs, arguments.only_last);
-    let changelog = generate_changelog(&repo, version_pairs)?;
+    let changelog = generate_changelog(&repo, version_pairs, |text| {
+        process_commit_message(text, &commit_regex, &commit_replacement)
+    })?;
     let rendered = render_changelog(changelog)?;
 
     println!("{}", rendered);
@@ -115,10 +122,14 @@ fn keep_only_last_version(
     }
 }
 
-fn generate_changelog(
+fn generate_changelog<F>(
     repo: &Repository,
     version_pairs: Vec<(DatedVersion, DatedVersion)>,
-) -> Result<Vec<(Version, NaiveDate, Vec<String>)>> {
+    commit_processor: F,
+) -> Result<Vec<(Version, NaiveDate, Vec<String>)>>
+where
+    F: Fn(&str) -> Option<String> + Clone,
+{
     let changelog = version_pairs
         .into_iter()
         .map(
@@ -133,7 +144,12 @@ fn generate_changelog(
                 debug!("Range: {}", range);
                 revwalk.push_range(&range)?;
 
-                let version_changelog = generate_version_changelog(&repo, &previous_oid, &oid)?;
+                let version_changelog = generate_version_changelog(
+                    &repo,
+                    &previous_oid,
+                    &oid,
+                    commit_processor.clone(),
+                )?;
 
                 debug!(
                     "Found {} changelog entries for version {}",
@@ -179,20 +195,30 @@ fn process_tag(oid: Oid, name: &[u8]) -> Result<(Version, Oid)> {
     Ok((version, oid))
 }
 
-fn process_commit_message(text: &str) -> Option<String> {
+fn process_commit_message(text: &str, regex: &Regex, replacement: &str) -> Option<String> {
     trace!("Commit message: {}", text);
-    if text.contains("issue #") {
-        Some(text.to_owned())
+
+    if let Some(captures) = regex.captures(text) {
+        trace!("Commit message matches regex");
+        let mut changelog_entry = String::new();
+        captures.expand(replacement, &mut changelog_entry);
+        trace!("Commit message expanded to: {}", changelog_entry);
+
+        Some(changelog_entry)
     } else {
         None
     }
 }
 
-fn generate_version_changelog(
+fn generate_version_changelog<F>(
     repo: &Repository,
     previous_oid: &Oid,
     oid: &Oid,
-) -> Result<Vec<String>> {
+    commit_processor: F,
+) -> Result<Vec<String>>
+where
+    F: Fn(&str) -> Option<String>,
+{
     let mut revwalk = repo.revwalk()?;
     let range = format!("{}..{}", previous_oid, oid);
     debug!("Range: {}", range);
@@ -201,19 +227,21 @@ fn generate_version_changelog(
     let changelog = revwalk
         .into_iter()
         .map(|oid| {
-            let oid = oid?;
+            let oid: Oid = oid?;
             let commit = repo.find_commit(oid)?;
-            if let Some(text) = commit.summary().and_then(process_commit_message) {
-                debug!("Found changelog entry {}", text);
-                Ok(Some(text))
+            let changelog_entry = commit.summary().and_then(|text| commit_processor(text));
+
+            if let Some(changelog_entry) = changelog_entry {
+                let changelog_entry: String = changelog_entry;
+                debug!("Found changelog entry {}", changelog_entry);
+                Ok(Some(changelog_entry))
             } else {
                 Ok(None)
             }
         })
-        .collect::<Result<Vec<_>>>()?
-        .into_iter()
-        .flatten()
-        .collect();
+        .collect::<Result<Vec<_>>>()?;
+
+    let changelog = changelog.into_iter().flatten().collect();
 
     Ok(changelog)
 }
