@@ -27,7 +27,9 @@ use commandline::Arguments;
 mod logging;
 use logging::setup_logging;
 
-type DatedVersion = (Version, NaiveDate, Oid);
+type DescribedVersion = (Version, Option<String>, Oid);
+type DatedVersion = (Version, Option<String>, NaiveDate, Oid);
+type VersionChangelog = (Version, Option<String>, NaiveDate, Vec<String>);
 
 fn main() -> Result<()> {
     let arguments = Arguments::from_args();
@@ -37,7 +39,12 @@ fn main() -> Result<()> {
     let commit_replacement = arguments.commit_replacement.clone();
 
     let repo = Repository::open(arguments.repo_path)?;
-    let versions = find_all_versions(&repo, arguments.include_head)?;
+    let versions = find_all_versions(
+        &repo,
+        arguments.include_head,
+        arguments.head_description,
+        arguments.strip_gpg_signature,
+    )?;
     info!("Found {} versions", versions.len());
 
     let versions = find_version_dates(&repo, versions)?;
@@ -47,7 +54,7 @@ fn main() -> Result<()> {
     let changelog = generate_changelog(&repo, version_pairs, |text| {
         process_commit_message(text, &commit_regex, &commit_replacement)
     })?;
-    let rendered = render_changelog(changelog)?;
+    let rendered = render_changelog(changelog, arguments.add_tag_description)?;
 
     println!("{}", rendered);
 
@@ -57,27 +64,38 @@ fn main() -> Result<()> {
 fn find_all_versions(
     repo: &Repository,
     head_version: Option<Version>,
-) -> Result<Vec<(Version, Oid)>> {
+    head_description: Option<String>,
+    strip_gpg_signature: bool,
+) -> Result<Vec<DescribedVersion>> {
     let mut versions = Vec::new();
+
+    let signature_regex =
+        Regex::new(r"\n-----BEGIN PGP SIGNATURE-----(?s:.+)-----END PGP SIGNATURE-----").unwrap();
 
     repo.tag_foreach(|oid, name| {
         debug!("Found tag {}", String::from_utf8_lossy(name));
         if let Ok((version, oid)) = process_tag(oid, name) {
             debug!("Found version {} ({})", version, oid);
-            versions.push((version, oid));
+            let tag = repo.find_tag(oid).unwrap();
+            let mut description = tag.message().map(|s| s.to_owned());
+            if strip_gpg_signature {
+                description = description
+                    .map(|description| signature_regex.replace(&description, "").to_string());
+            }
+            versions.push((version, description, oid));
         }
         true
     })?;
 
-    let initial_commit = find_initial_commit(repo)?;
-    versions.push(initial_commit);
+    let (initial_version, initial_oid) = find_initial_commit(repo)?;
+    versions.push((initial_version, Some("".to_owned()), initial_oid));
 
     if let Some(head_version) = head_version {
-        let head = find_head(repo, head_version)?;
-        versions.push(head);
+        let (head_version, head_oid) = find_head(repo, head_version)?;
+        versions.push((head_version, head_description, head_oid));
     }
 
-    versions.sort_by(|(a, _), (b, _)| a.cmp(b));
+    versions.sort_by(|(a, ..), (b, ..)| a.cmp(b));
     versions.reverse();
 
     Ok(versions)
@@ -103,15 +121,15 @@ fn find_head(repo: &Repository, version: Version) -> Result<(Version, Oid)> {
 
 fn find_version_dates(
     repo: &Repository,
-    versions: Vec<(Version, Oid)>,
+    versions: Vec<DescribedVersion>,
 ) -> Result<Vec<DatedVersion>> {
     let versions = versions
         .into_iter()
-        .map(|(version, oid)| {
+        .map(|(version, description, oid)| {
             let commit = repo.find_object(oid, None)?.peel_to_commit()?;
             let instant = Utc.timestamp(commit.time().seconds(), 0);
             let date = instant.naive_local().date();
-            Ok((version, date, oid))
+            Ok((version, description, date, oid))
         })
         .collect::<Result<Vec<_>>>()?;
     Ok(versions)
@@ -157,14 +175,14 @@ fn generate_changelog<F>(
     repo: &Repository,
     version_pairs: Vec<(DatedVersion, DatedVersion)>,
     commit_processor: F,
-) -> Result<Vec<(Version, NaiveDate, Vec<String>)>>
+) -> Result<Vec<VersionChangelog>>
 where
     F: Fn(&str) -> Option<String> + Clone,
 {
     let changelog = version_pairs
         .into_iter()
         .map(
-            |((version, date, oid), (previous_version, _previous_instant, previous_oid))| {
+            |((version, description, date, oid), (previous_version, _, _, previous_oid))| {
                 info!(
                     "Generating changelog between {} and {}",
                     previous_version, version,
@@ -187,7 +205,7 @@ where
                     version_changelog.len(),
                     version,
                 );
-                Ok((version, date, version_changelog))
+                Ok((version, description, date, version_changelog))
             },
         )
         .collect::<Result<Vec<_>>>()?;
@@ -195,23 +213,33 @@ where
     Ok(changelog)
 }
 
-fn render_changelog(changelog: Vec<(Version, NaiveDate, Vec<String>)>) -> Result<String> {
-    let mut markdown = Markdown::new();
+fn render_changelog(changelog: Vec<VersionChangelog>, add_tag_description: bool) -> Result<String> {
+    let mut output = String::new();
 
-    for (version, date, changelog) in changelog {
+    for (version, description, date, changelog) in changelog {
+        let mut markdown = Markdown::new();
         markdown.header1(format!("Version {} ({})", version, date));
+        output.push_str(&markdown.render());
+
+        let mut markdown = Markdown::new();
+        if add_tag_description {
+            if let Some(description) = description {
+                // Description is already in Markdown format
+                output.push_str(&description);
+                output.push('\n');
+                markdown.header2("Changes");
+            }
+        }
 
         let mut list_builder = List::builder();
         for entry in changelog {
             list_builder = list_builder.append(entry.clone());
         }
-
         markdown.list(list_builder.unordered());
+        output.push_str(&markdown.render());
     }
 
-    let rendered = markdown.render();
-
-    Ok(rendered)
+    Ok(output)
 }
 
 fn process_tag(oid: Oid, name: &[u8]) -> Result<(Version, Oid)> {

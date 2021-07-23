@@ -36,9 +36,21 @@ pub struct Arguments {
     #[structopt(short = "r", long, default_value = "${1} (issue ${2})")]
     pub commit_replacement: String,
 
+    /// Add version description from tag messages
+    #[structopt(long)]
+    pub add_tag_description: bool,
+
     /// Include the current head as last version
     #[structopt(short, long)]
     pub include_head: Option<Version>,
+
+    /// Set the current head description
+    #[structopt(short = "d", long)]
+    pub head_description: Option<String>,
+
+    /// Strip GPG signature from version descriptions
+    #[structopt(long)]
+    pub strip_gpg_signature: bool,
 
     /// Generate changelog for selected versions
     #[structopt(short = "s", long = "select-version")]
