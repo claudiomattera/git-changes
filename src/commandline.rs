@@ -39,4 +39,8 @@ pub struct Arguments {
     /// Include the current head as last version
     #[structopt(short, long)]
     pub include_head: Option<Version>,
+
+    /// Generate changelog for selected versions
+    #[structopt(short = "s", long = "select-version")]
+    pub selected_versions: Option<Vec<Version>>,
 }

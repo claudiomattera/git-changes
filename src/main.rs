@@ -42,6 +42,7 @@ fn main() -> Result<()> {
 
     let versions = find_version_dates(&repo, versions)?;
     let version_pairs = pair_versions(versions);
+    let version_pairs = filter_versions(version_pairs, arguments.selected_versions);
     let version_pairs = keep_only_last_version(version_pairs, arguments.only_last);
     let changelog = generate_changelog(&repo, version_pairs, |text| {
         process_commit_message(text, &commit_regex, &commit_replacement)
@@ -122,6 +123,22 @@ fn pair_versions(versions: Vec<DatedVersion>) -> Vec<(DatedVersion, DatedVersion
         .into_iter()
         .zip(versions.into_iter().skip(1))
         .collect::<Vec<_>>()
+}
+
+fn filter_versions(
+    version_pairs: Vec<(DatedVersion, DatedVersion)>,
+    selected_versions: Option<Vec<Version>>,
+) -> Vec<(DatedVersion, DatedVersion)> {
+    if let Some(selected_versions) = selected_versions {
+        debug!("Filtering only selected versions");
+        trace!("Selected versions: {:?}", selected_versions);
+        version_pairs
+            .into_iter()
+            .filter(|((first_version, ..), _)| selected_versions.contains(first_version))
+            .collect()
+    } else {
+        version_pairs
+    }
 }
 
 fn keep_only_last_version(
