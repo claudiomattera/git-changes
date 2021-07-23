@@ -8,6 +8,8 @@ use std::path::PathBuf;
 
 use regex::Regex;
 
+use semver::Version;
+
 use structopt::clap::{crate_authors, crate_description, crate_name};
 use structopt::StructOpt;
 
@@ -33,4 +35,8 @@ pub struct Arguments {
     /// Commit message replacement text
     #[structopt(short = "r", long, default_value = "${1} (issue ${2})")]
     pub commit_replacement: String,
+
+    /// Include the current head as last version
+    #[structopt(short, long)]
+    pub include_head: Option<Version>,
 }

@@ -37,7 +37,7 @@ fn main() -> Result<()> {
     let commit_replacement = arguments.commit_replacement.clone();
 
     let repo = Repository::open(arguments.repo_path)?;
-    let versions = find_all_versions(&repo)?;
+    let versions = find_all_versions(&repo, arguments.include_head)?;
     info!("Found {} versions", versions.len());
 
     let versions = find_version_dates(&repo, versions)?;
@@ -53,7 +53,10 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn find_all_versions(repo: &Repository) -> Result<Vec<(Version, Oid)>> {
+fn find_all_versions(
+    repo: &Repository,
+    head_version: Option<Version>,
+) -> Result<Vec<(Version, Oid)>> {
     let mut versions = Vec::new();
 
     repo.tag_foreach(|oid, name| {
@@ -64,11 +67,17 @@ fn find_all_versions(repo: &Repository) -> Result<Vec<(Version, Oid)>> {
         }
         true
     })?;
-    versions.sort_by(|(a, _), (b, _)| a.cmp(b));
-    versions.reverse();
 
     let initial_commit = find_initial_commit(repo)?;
     versions.push(initial_commit);
+
+    if let Some(head_version) = head_version {
+        let head = find_head(repo, head_version)?;
+        versions.push(head);
+    }
+
+    versions.sort_by(|(a, _), (b, _)| a.cmp(b));
+    versions.reverse();
 
     Ok(versions)
 }
@@ -84,6 +93,11 @@ fn find_initial_commit(repo: &Repository) -> Result<(Version, Oid)> {
     } else {
         Err(anyhow!("Missing initial commit"))
     }
+}
+
+fn find_head(repo: &Repository, version: Version) -> Result<(Version, Oid)> {
+    let oid = repo.head()?.peel_to_commit()?.id();
+    Ok((version, oid))
 }
 
 fn find_version_dates(
