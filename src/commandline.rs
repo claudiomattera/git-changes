@@ -24,7 +24,7 @@ pub struct Arguments {
     #[structopt(parse(from_os_str))]
     pub repo_path: PathBuf,
 
-    /// Only last version changes
+    /// Print changelog for latest version only
     #[structopt(short, long)]
     pub only_last: bool,
 
