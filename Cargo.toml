@@ -14,8 +14,8 @@ keywords = [
 ]
 categories = [
     "command-line-utilities",
+    "development-tools",
 ]
-publish = false
 
 [dependencies]
 anyhow = "1"
