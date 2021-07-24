@@ -29,11 +29,21 @@ pub struct Arguments {
     pub only_last: bool,
 
     /// Commit message regular expression
-    #[structopt(short, long, default_value = r"(.+)\s+\(issue\s+#(\d+)\)")]
+    #[structopt(
+        short,
+        long,
+        default_value = r"(.+)\s+\(issue\s+#(\d+)\)",
+        env = "COMMIT_REGEX"
+    )]
     pub commit_regex: Regex,
 
     /// Commit message replacement text
-    #[structopt(short = "r", long, default_value = "${1} (issue ${2})")]
+    #[structopt(
+        short = "r",
+        long,
+        default_value = "${1} (issue ${2})",
+        env = "COMMIT_REPLACEMENT"
+    )]
     pub commit_replacement: String,
 
     /// Add version description from tag messages
@@ -45,7 +55,7 @@ pub struct Arguments {
     pub include_head: Option<Version>,
 
     /// Set the current head description
-    #[structopt(short = "d", long)]
+    #[structopt(short = "d", long, env = "HEAD_DESCRIPTION")]
     pub head_description: Option<String>,
 
     /// Strip GPG signature from version descriptions
