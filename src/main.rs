@@ -225,7 +225,8 @@ fn render_changelog(changelog: Vec<VersionChangelog>, add_tag_description: bool)
         if add_tag_description {
             if let Some(description) = description {
                 // Description is already in Markdown format
-                output.push_str(&description);
+                output.push_str(&description.trim());
+                output.push('\n');
                 output.push('\n');
                 markdown.header2("Changes");
             }
