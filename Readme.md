@@ -2,7 +2,7 @@
 
 An application for generating a changelog from git commit tree
 
-<https://git.claudiomattera.it/claudiomattera/git-changelog>
+<https://gitlab.com/claudiomattera/git-changelog>
 
 
 Installation
@@ -126,7 +126,7 @@ Default values are, respectively, `(.+)\s+\(issue\s+#(\d+)\)` and `${1} (issue $
 In order to include links to the repository issues in the changelog, use something like:
 
 ~~~~plain
-${1} (issue [${2}](https://git.claudiomattera.it/claudiomattera/git-changelog/issues/#{2}))`
+${1} (issue [${2}](https://gitlab.com/claudiomattera/git-changelog/issues/#{2}))`
 ~~~~
 
 
