@@ -55,6 +55,7 @@ steps:
   - cargo test --examples --all-features
 
 - name: rebuild cache
+  failure: ignore
   image: plugins/s3-cache:1
   settings:
     endpoint:
