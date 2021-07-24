@@ -22,9 +22,7 @@ git changelog /path/to/git/repository > changelog.txt
 This is a Rust application and can be installed using Cargo.
 
 ~~~~shell
-cargo build --release
-
-# Resulting executable is in ./target/release/git-changelog
+cargo install git-changelog
 ~~~~
 
 
