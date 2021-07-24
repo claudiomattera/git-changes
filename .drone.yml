@@ -11,7 +11,7 @@ trigger:
 
 steps:
 - name: restore cache
-  image: plugins/s3-cache
+  image: plugins/s3-cache:1
   settings:
     endpoint:
       from_secret: s3_endpoint
@@ -55,7 +55,7 @@ steps:
   - cargo test --examples --all-features
 
 - name: rebuild cache
-  image: plugins/s3-cache
+  image: plugins/s3-cache:1
   settings:
     endpoint:
       from_secret: s3_endpoint
@@ -79,6 +79,7 @@ steps:
     secret_key:
       from_secret: s3_secret_key
     root: drone
+    flush_path: "drone/${DRONE_REPO_OWNER}/${DRONE_REPO_NAME}"
     flush: true
     flush_age: 7
 
@@ -89,32 +90,48 @@ name: build release
 trigger:
   event:
   - tag
+  - promote
 
 steps:
 - name: build linux amd64
+  when:
+    event:
+      exclude:
+      - promote
   image: docker.claudiomattera.it/claudiomattera/rust:1.52.0
+  environment:
+    CARGO_HOME: "./.cargo_home/"
   commands:
   - cargo build --release
 
 - name: package deb amd64
-  depends_on:
-  - build linux amd64
+  when:
+    event:
+      exclude:
+      - promote
   image: docker.claudiomattera.it/claudiomattera/rust:1.52.0
+  environment:
+    CARGO_HOME: "./.cargo_home/"
   commands:
   - cargo deb --no-build --package ${DRONE_REPO_NAME}
 
 - name: generate changelog
-  depends_on:
-  - build linux amd64
+  when:
+    event:
+      exclude:
+      - promote
   image: docker.claudiomattera.it/claudiomattera/rust:1.52.0
+  environment:
+    CARGO_HOME: "./.cargo_home/"
   commands:
-  - cargo run --release -- -vv --only-last . > target/changelog.md
+  - git fetch --tags
+  - cargo run --release -- -vvv --only-last --add-tag-description --strip-gpg-signature . > target/changelog.md
 
 - name: create release on gitea
-  depends_on:
-  - build linux amd64
-  - package deb amd64
-  - generate changelog
+  when:
+    event:
+      exclude:
+      - promote
   image: plugins/gitea-release
   settings:
     base_url:
@@ -128,6 +145,21 @@ steps:
     checksum:
       - sha512
     note: target/changelog.md
+
+- name: publish on crates.io
+  when:
+    event:
+    - promote
+    target:
+    - crates.io
+  image: docker.claudiomattera.it/claudiomattera/rust:1.52.0
+  environment:
+    CARGO_HOME: "./.cargo_home/"
+    CRATES_IO_TOKEN:
+      from_secret: crates_io_token
+  commands:
+  - cargo login $${CRATES_IO_TOKEN}
+  - cargo publish
 
 ---
 kind: pipeline
@@ -213,12 +245,12 @@ steps:
 ---
 kind: pipeline
 type: docker
-name: daily security report
+name: security report
 trigger:
   event:
   - cron
   cron:
-  - daily
+  - security report
 
 steps:
 - name: check security advisories
@@ -249,12 +281,12 @@ steps:
 ---
 kind: pipeline
 type: docker
-name: weekly cache flush
+name: cache flush
 trigger:
   event:
   - cron
   cron:
-  - weekly
+  - cache flush
 
 steps:
 - name: flush cache
