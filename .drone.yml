@@ -155,7 +155,6 @@ steps:
     - crates.io
   image: docker.claudiomattera.it/claudiomattera/rust:1.52.0
   environment:
-    CARGO_HOME: "./.cargo_home/"
     CRATES_IO_TOKEN:
       from_secret: crates_io_token
   commands:
