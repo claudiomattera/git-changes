@@ -24,7 +24,7 @@ steps:
 
 - name: check format
   failure: ignore
-  image: docker.claudiomattera.it/claudiomattera/rust:1.52.0
+  image: docker.claudiomattera.it/claudiomattera/rust:1.53.0
   environment:
     CARGO_HOME: "./.cargo_home/"
   commands:
@@ -32,21 +32,21 @@ steps:
 
 - name: run linter
   failure: ignore
-  image: docker.claudiomattera.it/claudiomattera/rust:1.52.0
+  image: docker.claudiomattera.it/claudiomattera/rust:1.53.0
   environment:
     CARGO_HOME: "./.cargo_home/"
   commands:
   - cargo clippy --all-targets --all-features -- -D warnings
 
 - name: build
-  image: docker.claudiomattera.it/claudiomattera/rust:1.52.0
+  image: docker.claudiomattera.it/claudiomattera/rust:1.53.0
   environment:
     CARGO_HOME: "./.cargo_home/"
   commands:
   - cargo build --all-targets --all-features
 
 - name: test
-  image: docker.claudiomattera.it/claudiomattera/rust:1.52.0
+  image: docker.claudiomattera.it/claudiomattera/rust:1.53.0
   environment:
     CARGO_HOME: "./.cargo_home/"
   commands:
@@ -99,7 +99,7 @@ steps:
     event:
       exclude:
       - promote
-  image: docker.claudiomattera.it/claudiomattera/rust:1.52.0
+  image: docker.claudiomattera.it/claudiomattera/rust:1.53.0
   environment:
     CARGO_HOME: "./.cargo_home/"
   commands:
@@ -110,7 +110,7 @@ steps:
     event:
       exclude:
       - promote
-  image: docker.claudiomattera.it/claudiomattera/rust:1.52.0
+  image: docker.claudiomattera.it/claudiomattera/rust:1.53.0
   environment:
     CARGO_HOME: "./.cargo_home/"
   commands:
@@ -121,7 +121,7 @@ steps:
     event:
       exclude:
       - promote
-  image: docker.claudiomattera.it/claudiomattera/rust:1.52.0
+  image: docker.claudiomattera.it/claudiomattera/rust:1.53.0
   environment:
     CARGO_HOME: "./.cargo_home/"
   commands:
@@ -153,7 +153,7 @@ steps:
     - promote
     target:
     - crates.io
-  image: docker.claudiomattera.it/claudiomattera/rust:1.52.0
+  image: docker.claudiomattera.it/claudiomattera/rust:1.53.0
   environment:
     CRATES_IO_TOKEN:
       from_secret: crates_io_token
@@ -254,7 +254,7 @@ trigger:
 
 steps:
 - name: check security advisories
-  image: docker.claudiomattera.it/claudiomattera/rust:1.52.0
+  image: docker.claudiomattera.it/claudiomattera/rust:1.53.0
   commands:
   - cargo audit --deny unsound --deny yanked
 
