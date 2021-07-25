@@ -1,12 +1,12 @@
 [package]
-name = "git-changelog"
+name = "git-changes"
 version = "0.1.0"
 authors = ["Claudio Giovanni Mattera <dev@claudiomattera.it>"]
 edition = "2018"
 description = "Generate changelog from git commit tree"
 readme = "Readme.md"
-homepage = "https://gitlab.com/claudiomattera/git-changelog"
-repository = "https://gitlab.com/claudiomattera/git-changelog"
+homepage = "https://gitlab.com/claudiomattera/git-changes"
+repository = "https://gitlab.com/claudiomattera/git-changes"
 license = "MPL-2.0"
 keywords = [
     "git",

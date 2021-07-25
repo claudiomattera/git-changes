@@ -2,7 +2,7 @@
 
 An application for generating a changelog from git commit tree
 
-<https://gitlab.com/claudiomattera/git-changelog>
+<https://gitlab.com/claudiomattera/git-changes>
 
 
 Installation
@@ -10,7 +10,7 @@ Installation
 
 Executables can be downloaded in the [releases page](./releases).
 
-If the executable `git-changelog` is put inside a directory included in the `PATH` environment variable, a new git subcommand `changelog` is available.
+If the executable `git-changes` is put inside a directory included in the `PATH` environment variable, a new git subcommand `changelog` is available.
 
 ~~~~shell
 git changelog /path/to/git/repository > changelog.txt
@@ -22,7 +22,7 @@ git changelog /path/to/git/repository > changelog.txt
 This is a Rust application and can be installed using Cargo.
 
 ~~~~shell
-cargo install git-changelog
+cargo install git-changes
 ~~~~
 
 
@@ -40,12 +40,12 @@ The application looks at the commit tree and considers all changes between each 
 then it creates a Markdown changelog listing all changes for each version and prints it to standard output.
 
 ~~~~plain
-git-changelog 0.1.0
+git-changes 0.1.0
 Claudio Giovanni Mattera <dev@claudiomattera.it>
 Generate changelog from git commit tree
 
 USAGE:
-    git-changelog [FLAGS] [OPTIONS] <repo-path>
+    git-changes [FLAGS] [OPTIONS] <repo-path>
 
 FLAGS:
         --add-tag-description    Add version description from tag messages
@@ -124,7 +124,7 @@ Default values are, respectively, `(.+)\s+\(issue\s+#(\d+)\)` and `${1} (issue $
 In order to include links to the repository issues in the changelog, use something like:
 
 ~~~~plain
-${1} (issue [${2}](https://gitlab.com/claudiomattera/git-changelog/issues/#{2}))`
+${1} (issue [${2}](https://gitlab.com/claudiomattera/git-changes/issues/#{2}))`
 ~~~~
 
 
@@ -135,7 +135,7 @@ It is possible to generate a changelog for the current head, so that it can be i
 In the following example, the version `1.0.3` is assigned to the current head.
 
 ~~~~shell
-git-changelog --include-head 1.0.3
+git-changes --include-head 1.0.3
 ~~~~
 
 
@@ -144,7 +144,7 @@ git-changelog --include-head 1.0.3
 The tag message can be used as a summary before the list of changes in the changelog.
 
 ~~~~shell
-git-changelog --add-tag-description
+git-changes --add-tag-description
 ~~~~
 
 This application will generate the following Markdown changelog.

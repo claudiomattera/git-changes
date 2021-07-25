@@ -18,8 +18,8 @@ pub fn setup_logging(verbosity: u8) {
     let default_log_filter = match verbosity {
         0 => "warn",
         1 => "info",
-        2 => "info,git_changelog=debug",
-        3 => "info,git_changelog=trace",
+        2 => "info,git_changes=debug",
+        3 => "info,git_changes=trace",
         4 => "debug",
         _ => "trace",
     };
